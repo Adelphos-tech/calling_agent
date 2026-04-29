@@ -466,8 +466,12 @@ class DeepgramStreamSTT:
         self._keepalive_task: Optional[asyncio.Task] = None
         self._closed = False
         self._partial_buffer: list = []  # accumulate is_final transcripts until UtteranceEnd
-        # Optional callback fired when Deepgram detects speech start (used for barge-in)
-        self.on_speech_started = None  # async callable, no args
+        # Optional callback fired when Deepgram emits an interim transcript with text
+        # (authoritative barge-in trigger — used for full LLM/TTS teardown).
+        self.on_speech_started = None  # async callable: (transcript: str) -> None
+        # Optional callback fired on Deepgram's raw SpeechStarted VAD event
+        # (~150ms earlier than the first transcript — used for fast audio pause).
+        self.on_voice_activity = None  # async callable, no args
 
     async def start(self):
         params = {
@@ -547,6 +551,17 @@ class DeepgramStreamSTT:
                         full = " ".join(self._partial_buffer).strip()
                         self._partial_buffer = []
                         await self._queue.put(full)
+
+                elif msg_type == "SpeechStarted":
+                    # Deepgram VAD detected voice onset — fires ~150ms before
+                    # the first transcript. Use this purely for fast audio pause
+                    # (Twilio `clear`) — NOT for full LLM/TTS teardown, since
+                    # this can also fire on noise / acoustic echo.
+                    if self.on_voice_activity:
+                        try:
+                            await self.on_voice_activity()
+                        except Exception as e:
+                            print(f"[Deepgram] voice_activity callback error: {e}")
 
                 elif msg_type == "UtteranceEnd":
                     # Backstop: flush whatever finals we accumulated
@@ -1028,6 +1043,39 @@ async def voice_websocket(websocket: WebSocket):
     # Minimum interim-transcript length before we treat it as real speech.
     BARGE_IN_MIN_CHARS = 2
 
+    async def _send_twilio_clear():
+        """Drop in-flight audio in Twilio's buffer so the caller hears silence ASAP."""
+        if not state.get("stream_sid"):
+            return
+        try:
+            await websocket.send_text(json.dumps({
+                "event": "clear",
+                "streamSid": state["stream_sid"],
+            }))
+        except Exception as e:
+            print(f"[barge-in] failed to send clear: {e}")
+
+    async def on_voice_activity():
+        """Fast pre-trigger: Deepgram detected voice onset (~150ms before transcript).
+
+        Sends Twilio `clear` immediately so the caller hears silence faster.
+        Does NOT cancel the LLM/TTS player — that's handled by `on_barge_in`
+        once an actual transcript confirms real speech (avoids tearing down on
+        noise / acoustic echo false alarms).
+        """
+        if not state["agent_speaking"]:
+            return
+        if state.get("interrupted") or state.get("voice_activity_pending"):
+            return
+        started = state.get("t_turn_start") or 0
+        elapsed_ms = (asyncio.get_event_loop().time() - started) * 1000
+        if elapsed_ms < BARGE_IN_GRACE_MS:
+            return
+        state["voice_activity_pending"] = True
+        state["t_voice_activity"] = asyncio.get_event_loop().time()
+        print(f"[barge-in/fast] voice onset @ {int(elapsed_ms)}ms — clearing Twilio buffer")
+        await _send_twilio_clear()
+
     async def on_barge_in(transcript: str = ""):
         """Caller started speaking — interrupt agent TTS if it's a real utterance."""
         if not state["agent_speaking"]:
@@ -1041,7 +1089,13 @@ async def voice_websocket(websocket: WebSocket):
         if elapsed_ms < BARGE_IN_GRACE_MS:
             return
 
-        print(f"[barge-in] caller said {transcript!r} after {int(elapsed_ms)}ms, cancelling TTS")
+        # Measure how much earlier the fast pre-trigger fired (if it did)
+        fast_lead_ms = ""
+        t_va = state.get("t_voice_activity")
+        if t_va:
+            fast_lead_ms = f" (fast pre-clear lead: {int((asyncio.get_event_loop().time() - t_va) * 1000)}ms)"
+
+        print(f"[barge-in] caller said {transcript!r} after {int(elapsed_ms)}ms, cancelling TTS{fast_lead_ms}")
         state["interrupted"] = True
 
         # Drain pending TTS segments and cancel the player
@@ -1054,16 +1108,11 @@ async def voice_websocket(websocket: WebSocket):
             player.cancel()
 
         # Tell Twilio to drop any audio we already sent that hasn't played yet
-        if state["stream_sid"]:
-            try:
-                await websocket.send_text(json.dumps({
-                    "event": "clear",
-                    "streamSid": state["stream_sid"],
-                }))
-            except Exception as e:
-                print(f"[barge-in] failed to send clear: {e}")
+        # (may have already been sent by on_voice_activity — sending again is cheap)
+        await _send_twilio_clear()
 
     stt.on_speech_started = on_barge_in
+    stt.on_voice_activity = on_voice_activity
 
     try:
         # Pre-warm Deepgram TTS connection in parallel with STT setup so the
@@ -1268,6 +1317,8 @@ async def handle_user_utterance(websocket: WebSocket, state: dict, session_id: s
     state["t_turn_start"] = asyncio.get_event_loop().time()
     state["first_audio_logged"] = False
     state["interrupted"] = False
+    state["voice_activity_pending"] = False
+    state["t_voice_activity"] = None
     state["tts_queue"] = asyncio.Queue()
     state["tts_player_task"] = asyncio.create_task(_tts_player_loop(websocket, state))
 
@@ -1347,6 +1398,8 @@ async def handle_voice_response(websocket: WebSocket, state: dict, session_id: s
         state["t_turn_start"] = asyncio.get_event_loop().time()
         state["first_audio_logged"] = False
         state["interrupted"] = False
+        state["voice_activity_pending"] = False
+        state["t_voice_activity"] = None
         state["agent_speaking"] = True  # unblock barge-in immediately
         state["tts_queue"] = asyncio.Queue()
         state["tts_player_task"] = asyncio.create_task(_tts_player_loop(websocket, state))
