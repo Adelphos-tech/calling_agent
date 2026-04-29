@@ -1328,32 +1328,87 @@ async def handle_user_utterance(websocket: WebSocket, state: dict, session_id: s
 
 
 async def handle_voice_response(websocket: WebSocket, state: dict, session_id: str, is_greeting: bool = False):
-    """Send greeting (cancellable for barge-in)."""
+    """Generate the call's opening intro via the LLM streaming pipeline.
+
+    No hardcoded welcome string — the LLM produces a fresh, natural intro every
+    call based on the active persona. Uses the SAME pipeline as a normal turn
+    (streaming Groq → sentence flush → TTS queue → player loop) so barge-in
+    behaves identically to mid-conversation interrupts.
+
+    `state['agent_speaking']` is flipped on immediately so that even before the
+    first TTS byte arrives the caller can interrupt — `on_barge_in` won't
+    short-circuit on an `agent_speaking == False` guard during LLM warmup.
+    """
     try:
         if not is_greeting:
             return
-        greeting = current_persona["welcome_message"].format(
-            agent_name=current_persona["agent_name"],
-            agency_name=current_persona["agency_name"]
-        )
-        print(f"Sending greeting: {greeting}")
-        conversation_manager.add_message(session_id, "assistant", greeting)
 
+        # Per-turn state reset (mirror handle_user_utterance)
         state["t_turn_start"] = asyncio.get_event_loop().time()
         state["first_audio_logged"] = False
         state["interrupted"] = False
+        state["agent_speaking"] = True  # unblock barge-in immediately
         state["tts_queue"] = asyncio.Queue()
         state["tts_player_task"] = asyncio.create_task(_tts_player_loop(websocket, state))
-        await state["tts_queue"].put(greeting)
+
+        # Build a kickoff turn that tells the LLM to introduce itself naturally.
+        # The base system prompt already contains the persona name + agency, so
+        # we just nudge the model to greet. We do NOT add this synthetic user
+        # message to the persistent conversation history — it's a one-shot prompt.
+        properties_context = property_service.format_properties_for_context()
+        kickoff_user_msg = (
+            "[SYSTEM: The phone call has just connected. Greet the caller in ONE "
+            "warm, natural sentence — introduce yourself by name and agency, then "
+            "ask what kind of property they're looking for. Speak as you naturally "
+            "would on a phone call. Do not use generic openers like 'Great to "
+            "connect' or 'Thank you for calling'.]"
+        )
+
+        full_response = []
+        buf = ""
+        first_flush_done = False
+        t_first_token_logged = False
+
+        async for delta in groq_service.generate_response_stream(
+            [{"role": "user", "content": kickoff_user_msg}],
+            properties_context,
+            user_text=kickoff_user_msg,
+        ):
+            if state.get("interrupted"):
+                break
+            if not t_first_token_logged:
+                ttft = int((asyncio.get_event_loop().time() - state["t_turn_start"]) * 1000)
+                print(f"[latency] greeting LLM first token: {ttft}ms")
+                t_first_token_logged = True
+            full_response.append(delta)
+            buf += delta
+            min_chars = FIRST_FLUSH_MIN_CHARS if not first_flush_done else NEXT_FLUSH_MIN_CHARS
+            cut = _find_flush_point(buf, min_chars, allow_soft=not first_flush_done)
+            if cut > 0:
+                segment = buf[:cut]
+                buf = buf[cut:]
+                await state["tts_queue"].put(segment)
+                first_flush_done = True
+
+        if not state.get("interrupted") and buf.strip():
+            await state["tts_queue"].put(buf)
         await state["tts_queue"].put(None)
+
         try:
             await state["tts_player_task"]
         except asyncio.CancelledError:
             print("[tts] greeting cancelled by barge-in")
-        finally:
-            state["tts_player_task"] = None
+
+        greeting_text = "".join(full_response).strip()
+        if greeting_text:
+            conversation_manager.add_message(session_id, "assistant", greeting_text)
+            print(f"Greeting (LLM-generated): {greeting_text}")
     except Exception as e:
         print(f"Error sending voice response: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        state["tts_player_task"] = None
 
 
 async def send_twilio_audio_response(websocket: WebSocket, state: dict, text: str):
