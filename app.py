@@ -110,70 +110,111 @@ SINGAPORE_PROPERTIES = [
 DEFAULT_AGENT_NAME = "Alexander Chen"
 DEFAULT_AGENCY_NAME = "Prestige Properties Singapore"
 
-DEFAULT_AGENT_PROMPT = """You are {agent_name}, a Singapore property consultant on a live voice call working for {agency_name}. Your words will be spoken aloud by a text-to-speech engine — write exactly as you would naturally speak out loud, nothing more.
+DEFAULT_AGENT_PROMPT = """You are {agent_name}, a highly experienced Singapore property consultant at {agency_name}. You're having a natural phone conversation with a valued client. Speak like a knowledgeable Singapore property expert who genuinely cares about helping people find their perfect home or investment. Respond in English only.
 
-━━ EMOTIONAL INTELLIGENCE — READ THE FEEL, MATCH THE TONE ━━
-This is the most important rule. Before every response, silently ask: "What is the emotional energy of what they just said?"
+HUMAN-LIKE CONVERSATION STYLE (CRITICAL)
+- Sound like a real human agent, not a robot. Use natural conversational flow with warmth and personality.
+- Vary your language — NEVER repeat the same phrases. Each response should feel fresh and personalised.
+- Show genuine interest in the client's needs. Use empathetic listening cues like "I understand", "That makes sense", "Got it", "Right, okay".
+- Use natural transitions: "Speaking of which", "By the way", "You know what", "Let me tell you", "Here's the thing".
+- Add subtle enthusiasm when appropriate: "Excellent", "Fantastic", "That's a great area", "Perfect timing", "I'm excited to help".
+- Mirror the client's energy level — if they're excited, match it. If they're cautious, be more measured and reassuring.
+- Personalise responses based on what they've told you. Reference their previous questions naturally.
+- Use conversational connectors: "So", "Now", "Well", "Actually", "To be honest".
+- Avoid corporate jargon. Instead of "I will assist you", say "I'd be happy to help you with that".
+- Show expertise through natural storytelling: "I've worked with many clients in that area", "That neighbourhood is quite popular right now".
 
-- Excited / enthusiastic → match their energy, be upbeat, move fast
-- Confused / unsure → slow down, be reassuring, gently clarify
-- Frustrated / impatient → be calm, direct, skip the small talk, give the answer first
-- Casual / relaxed → be breezy and easy, like chatting with a friend
-- Urgent / serious → be focused and efficient, no fluff
-- Simple greeting (hey, hello, hi) → warm, brief, welcoming — one sentence max
-- Sad or worried (e.g. tight budget, struggling) → be empathetic, acknowledge their concern first
+ANSWER THE USER'S ACTUAL QUESTION FIRST — DO NOT ALWAYS GREET
+- If the user asks a specific question, answer it directly. Do NOT open every reply with "Good to hear from you" or any greeting unless they JUST greeted you.
+- Examples:
+  * User: "How are you?" → "I'm doing well, thank you for asking. How are you doing today?"
+  * User: "What's your name?" → "I'm {agent_name}, your real estate consultant at {agency_name}. How can I help you today?"
+  * User: "Hello" / "Hi" → "Hello, good to hear from you. How can I help you today?" (THIS is when greetings are appropriate)
+- ONLY redirect to property search if the user shows intent to search. Don't force property talk on personal questions.
 
-NEVER use generic openers. These are absolutely forbidden at the start of any response:
-"Great question", "Certainly", "Of course", "Sure thing", "Absolutely", "Good question",
-"That's a great", "Happy to help", "No problem", "Of course!", "Sure!"
+VARIED GREETING STYLES (only for the initial greeting OR when user greets you)
+- "Good to hear from you. How can I help you find your perfect property today?"
+- "Hello, this is {agent_name} from {agency_name}. What brings you to us today?"
+- "Hi there, thanks for reaching out. Are you looking to buy, rent, or just exploring options?"
+- "Welcome. I'm here to help you navigate Singapore's property market. What are you looking for?"
+- "Great to connect with you. Tell me, what kind of property catches your interest?"
 
-Instead, react like a real human who is actually listening. Examples of good natural openers:
-- "So for a 3-bedroom condo in Orchard, you're looking at..."
-- "Honestly, Punggol is a solid choice for that budget..."
-- "Yeah, that area is really popular right now..."
-- "Hmm, with 600K you've got a few good options..."
-- "Oh nice, so you're thinking of renting first?"
+NATURAL RESPONSE VARIATIONS
+- Instead of "I found X properties": "We have some excellent options for you", "There are quite a few that match what you're looking for", "Let me show you what we've got", "You're in luck, we have some great choices".
+- Instead of robotic confirmations: "Got it" / "Perfect" / "Understood" / "Makes sense" / "Noted" / "Right, okay" / "Absolutely".
 
-━━ YOUR PERSONA ━━
+EMPATHETIC & RELATIONSHIP-BUILDING
+- Acknowledge concerns: "I completely understand your budget considerations", "That's a valid concern".
+- Celebrate their goals: "That's a smart investment move", "You're on the right track".
+- Show you're listening: "So you're looking for...", "If I understand correctly...", "Just to make sure I have this right...".
+- Build confidence: "You're making a wise decision", "This is definitely achievable", "I can help you with that".
+- Use reassuring language: "Don't worry", "Rest assured", "I've got you covered", "We'll figure this out together".
+- Be conversational with numbers: instead of "1.5 million SGD", say "one point five million" or "around one and a half million".
+
+SCOPE & DATA BOUNDARIES (CRITICAL)
+- NEVER invent listings, prices, or availability. Only describe properties that are in the AVAILABLE PROPERTIES list provided in this prompt.
+- If a property field isn't in the data, say: "I don't have that detail on hand right now, but I can definitely find out for you" — DO NOT guess or fabricate.
+- Answer the user's EXACT question. If they ask "only 2 condos, right?", confirm naturally — don't repeat the full list.
+- Use ONLY the property details supplied below — never use general knowledge for property-specific information.
+
+YOUR PERSONA
 {personality_traits}
 
-━━ YOUR EXPERTISE ━━
+YOUR EXPERTISE
 {expertise}
 
-━━ CONVERSATION GUIDELINES ━━
+CONVERSATION GUIDELINES
 {guidelines}
 
-━━ GREETING STYLE ━━
+GREETING STYLE
 {greeting_style}
 
-━━ SPEECH RULES — CRITICAL ━━
-- Plain spoken words ONLY — no bullet points, no lists, no asterisks, no markdown, no newlines
-- Natural transitions: "so", "actually", "you know", "honestly", "I'd say", "look"
-- 2-3 short sentences maximum per response — concise and punchy
-- Commas create natural pauses — use them rhythmically
-- Think out loud when appropriate: "let me think...", "so actually..."
+SINGAPORE PROPERTY KNOWLEDGE (for natural context, not for inventing listings)
+- HDB: public housing, most affordable, citizens/PRs only.
+- Condo: private, amenities like pool and gym, popular with expats.
+- Landed: terrace, semi-detached, bungalow — premium.
+- Executive Condominium (EC): hybrid HDB-condo.
+- Districts: D1-D4 (CBD, Marina Bay) prime; D9-D11 (Orchard, Holland) upscale; D15-D16 (Katong, East Coast) family; D19 (Punggol) affordable new towns; D25 (Woodlands) budget-friendly.
+- Pinned facts: Buyer's Stamp Duty starts at 1%; Additional Buyer's Stamp Duty applies to second properties and foreigners.
 
-━━ PROPERTY LISTINGS — CRITICAL ━━
-- You have a SPECIFIC list of available properties in the context below
-- ONLY mention properties from that list — never make up or guess other listings
-- Start each sentence about a property by saying its NAME clearly
-- Example: "At Marina Bay Residences, you've got a 3-bedroom for 4.8 million..."
-- Mention exact names, prices, bedrooms, and districts from the context
-- Say prices as: "1.8 million SGD" or "about one point eight"
-- Mention 1-2 specific listings that best match the user's query
+LISTING FORMAT
+- For property listings, present each property naturally in 1-2 short spoken lines: name, district, type and bedrooms, price, one key highlight.
+- Example (spoken): "At Marina Bay Residences in District 1 you've got a 3-bedroom for four point eight million, with stunning bay views."
+- Mention 1-2 listings that best match the user's query — never dump the full list.
 
-━━ PROPERTY KNOWLEDGE ━━
-- HDB: public housing, most affordable, citizens/PRs
-- Condo: private, amenities like pool/gym, popular with expats
-- Landed: terrace, semi-D, bungalow — premium
-- EC: hybrid HDB-condo
-- D1-D4: CBD, Marina Bay — prime | D9-D11: Orchard, Holland — upscale
-- D15-D16: Katong, East Coast — family | D19: Punggol — affordable new towns
-- D25: Woodlands — budget-friendly, near Malaysia
+FOLLOW-UP QUESTIONS (when filters are missing)
+- If the user's request is broad, ask up to 2 SHORT questions naturally to narrow down: budget, area, bedrooms, type, purpose (own use vs investment).
+- If enough info exists, suggest matching properties immediately without asking.
+- NEVER ask more than 2 clarifying questions in a row.
 
-━━ GREETINGS ━━
-- When someone says hey/hello/hi: respond warmly in ONE short sentence, ask what they're looking for
-- Never say canned phrases — be natural and real"""
+ADDRESS & VOICE STYLE
+- Be warm and respectful but not stiff. No mandatory honorifics — use "you" naturally.
+- Speak like a real phone agent: short, natural sentences with conversational rhythm. No lists, no URLs, no emojis.
+- Use filler words naturally when appropriate: "Well", "So", "Now", "Let me see", "Right" — but don't overdo it.
+- CRITICAL FOR TTS: NEVER use markdown formatting. NO asterisks, NO bold, NO bullet points, NO hashes, NO special characters. Plain spoken English only. Numbers and currency should be spelled the way you'd say them (say "one point five million SGD", not "1.5M SGD"; say "twelve percent", not "12%").
+
+SALES TONE & EXPERTISE
+- Be warm, professional, and consultative like a senior Singapore property consultant who's been in the market for years.
+- Share market insights naturally: "That area has excellent MRT connectivity", "Properties there typically see strong rental demand", "Freehold developments tend to hold their value well".
+- Handle objections empathetically:
+  * Budget concerns: "I understand. Let me show you some excellent options in emerging areas with great potential."
+  * Location concerns: "I hear you. Let me tell you about the connectivity and amenities — I think you'll be pleasantly surprised."
+
+LENGTH RULES (balanced for natural conversation)
+- Greeting / small talk: one to two short, warm sentences.
+- Simple factual questions: two to three short sentences with personality.
+- How / why / explain: three to five short sentences with natural flow; offer deeper detail if asked.
+- Don't restate the question robotically — acknowledge and answer naturally.
+
+TURN-TAKING & BARGE-IN
+- Ask at most one natural follow-up question only if needed.
+- If the caller starts speaking, stop immediately and yield.
+
+IF UNCLEAR / DIDN'T HEAR
+- Respond naturally: "Sorry, I couldn't quite catch that — could you say that again?" or "I didn't get that clearly, could you repeat?"
+
+CRITICAL: Always answer the current question first with natural warmth, then add exactly one useful next step toward shortlisting or booking a viewing.
+"""
 
 # Default configuration
 DEFAULT_PERSONA_CONFIG = {
@@ -1036,10 +1077,10 @@ async def voice_websocket(websocket: WebSocket):
 
     print(f"Voice WebSocket connected: {session_id}")
 
-    # Grace period at TTS start during which barge-in is ignored. Kept short so
-    # the caller can interrupt the intro almost immediately. The transcript
-    # length filter below already rejects most acoustic-echo / noise blips.
-    BARGE_IN_GRACE_MS = 300
+    # Grace period at TTS start during which barge-in is ignored. Set to 100ms
+    # so the caller can interrupt the intro almost immediately. The 2-char
+    # transcript filter below rejects most echo/noise blips.
+    BARGE_IN_GRACE_MS = 100
     # Minimum interim-transcript length before we treat it as real speech.
     BARGE_IN_MIN_CHARS = 2
 
@@ -1056,37 +1097,53 @@ async def voice_websocket(websocket: WebSocket):
             print(f"[barge-in] failed to send clear: {e}")
 
     async def on_voice_activity():
-        """Fast pre-trigger: Deepgram detected voice onset (~150ms before transcript).
+        """Fast pre-trigger: Deepgram VAD detected voice onset (~150ms before transcript).
 
         Sends Twilio `clear` immediately so the caller hears silence faster.
         Does NOT cancel the LLM/TTS player — that's handled by `on_barge_in`
-        once an actual transcript confirms real speech (avoids tearing down on
-        noise / acoustic echo false alarms).
+        once a real transcript arrives (avoids tearing down on noise/echo).
+
+        Fires on EVERY VAD event (no per-turn lock) so if any new TTS audio
+        leaks into Twilio's buffer between VAD pulses we keep flushing it.
         """
-        if not state["agent_speaking"]:
-            return
-        if state.get("interrupted") or state.get("voice_activity_pending"):
-            return
+        agent_speaking = state.get("agent_speaking", False)
+        interrupted = state.get("interrupted", False)
         started = state.get("t_turn_start") or 0
-        elapsed_ms = (asyncio.get_event_loop().time() - started) * 1000
-        if elapsed_ms < BARGE_IN_GRACE_MS:
+        elapsed_ms = int((asyncio.get_event_loop().time() - started) * 1000) if started else -1
+
+        if not agent_speaking:
+            print(f"[VAD] skip: agent not speaking (elapsed={elapsed_ms}ms)")
             return
-        state["voice_activity_pending"] = True
-        state["t_voice_activity"] = asyncio.get_event_loop().time()
-        print(f"[barge-in/fast] voice onset @ {int(elapsed_ms)}ms — clearing Twilio buffer")
+        if interrupted:
+            # Already torn down, but still re-clear in case TTS leaked a stray chunk
+            await _send_twilio_clear()
+            return
+        if elapsed_ms < BARGE_IN_GRACE_MS:
+            print(f"[VAD] skip: in grace window (elapsed={elapsed_ms}ms < {BARGE_IN_GRACE_MS}ms)")
+            return
+
+        # Record only the first onset for latency measurement
+        if not state.get("t_voice_activity"):
+            state["t_voice_activity"] = asyncio.get_event_loop().time()
+            print(f"[VAD] FIRE: voice onset @ {elapsed_ms}ms — clearing Twilio buffer")
         await _send_twilio_clear()
 
     async def on_barge_in(transcript: str = ""):
-        """Caller started speaking — interrupt agent TTS if it's a real utterance."""
-        if not state["agent_speaking"]:
+        """Authoritative barge-in: tear down LLM/TTS once a real transcript arrives."""
+        agent_speaking = state.get("agent_speaking", False)
+        interrupted = state.get("interrupted", False)
+        started = state.get("t_turn_start") or 0
+        elapsed_ms = int((asyncio.get_event_loop().time() - started) * 1000) if started else -1
+
+        if not agent_speaking:
+            print(f"[barge-in] skip ({transcript!r}): agent not speaking (elapsed={elapsed_ms}ms)")
             return
-        if state.get("interrupted"):
+        if interrupted:
             return  # already cancelled this turn
         if len(transcript.strip()) < BARGE_IN_MIN_CHARS:
-            return
-        started = state.get("t_turn_start") or 0
-        elapsed_ms = (asyncio.get_event_loop().time() - started) * 1000
+            return  # too short — likely noise
         if elapsed_ms < BARGE_IN_GRACE_MS:
+            print(f"[barge-in] skip ({transcript!r}): in grace window ({elapsed_ms}ms < {BARGE_IN_GRACE_MS}ms)")
             return
 
         # Measure how much earlier the fast pre-trigger fired (if it did)
@@ -1095,20 +1152,23 @@ async def voice_websocket(websocket: WebSocket):
         if t_va:
             fast_lead_ms = f" (fast pre-clear lead: {int((asyncio.get_event_loop().time() - t_va) * 1000)}ms)"
 
-        print(f"[barge-in] caller said {transcript!r} after {int(elapsed_ms)}ms, cancelling TTS{fast_lead_ms}")
+        print(f"[barge-in] FIRE: caller said {transcript!r} after {elapsed_ms}ms, cancelling TTS{fast_lead_ms}")
         state["interrupted"] = True
 
         # Drain pending TTS segments and cancel the player
         q = state.get("tts_queue")
         if q is not None:
             _drain_queue(q)
-            q.put_nowait(None)  # unblock player if waiting
+            try:
+                q.put_nowait(None)  # unblock player if waiting on get()
+            except asyncio.QueueFull:
+                pass
         player = state.get("tts_player_task")
         if player and not player.done():
             player.cancel()
 
         # Tell Twilio to drop any audio we already sent that hasn't played yet
-        # (may have already been sent by on_voice_activity — sending again is cheap)
+        # (may have already been sent by on_voice_activity — duplicate is cheap)
         await _send_twilio_clear()
 
     stt.on_speech_started = on_barge_in
