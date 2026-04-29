@@ -984,7 +984,11 @@ async def twilio_webhook(request: Request):
     return HTMLResponse(content=str(response), media_type="application/xml")
 
 import struct
-import audioop
+try:
+    import audioop
+except ImportError:
+    # Python 3.13+ removed audioop, use audioop-lts instead
+    import audioop_lts as audioop
 
 # Per-session state for voice calls
 voice_sessions: dict = {}
