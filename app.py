@@ -1230,6 +1230,14 @@ async def voice_websocket(websocket: WebSocket):
 
             elif event_type == "stop":
                 print(f"Call ended - Call SID: {state['call_sid']}")
+                # Cancel TTS player to prevent sending to closed WebSocket
+                player = state.get("tts_player_task")
+                if player and not player.done():
+                    player.cancel()
+                    try:
+                        await player
+                    except asyncio.CancelledError:
+                        pass
                 break
 
             elif event_type == "mark":
@@ -1246,6 +1254,10 @@ async def voice_websocket(websocket: WebSocket):
         await stt.close()
         if consumer_task:
             consumer_task.cancel()
+        # Cancel TTS player if still running
+        player = state.get("tts_player_task")
+        if player and not player.done():
+            player.cancel()
         voice_sessions.pop(session_id, None)
         conversation_manager.clear(session_id)
 
